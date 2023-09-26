@@ -22,3 +22,8 @@ logging:
         models:
           parameters:
             AbstractSerializableParameter: ERROR
+
+springdoc:
+  api-docs:
+    path: /api-docs
+    
