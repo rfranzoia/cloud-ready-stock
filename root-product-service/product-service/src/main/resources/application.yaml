@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: product-service
+  h2:
+    console:
+      enabled: 'true'
+  jpa:
+    show-sql: 'true'
+    hibernate:
+      ddl-auto: create-drop
+
+server:
+  port: '8082'
+  servlet:
+    context-path: /product-service
+
+logging:
+  level:
+    io:
+      swagger:
+        models:
+          parameters:
+            AbstractSerializableParameter: ERROR
