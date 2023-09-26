@@ -14,12 +14,12 @@ spring:
         - id: stock-service
           uri: lb://stock-service
           predicates:
-            - Path=/stock-service/api/v1/**
+            - Path=/stock-service/**
         - id: product-service
           uri: lb://product-service
           predicates:
-            - Path=/product-service/api/v1/products/**
+            - Path=/product-service/**
         - id: category-service
           uri: lb://category-service
           predicates:
-            - Path=/category-service/api/v1/categories/**
+            - Path=/category-service/**
