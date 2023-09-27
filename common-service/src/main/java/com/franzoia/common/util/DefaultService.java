@@ -5,6 +5,7 @@ import com.franzoia.common.exception.ConstraintsViolationException;
 import com.franzoia.common.exception.EntityNotFoundException;
 import com.franzoia.common.util.audit.AuditableEntity;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,9 +17,8 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public abstract class DefaultService<DTO extends Dto, T extends DefaultEntity, ID, M extends AbstractMapper<T, DTO>> implements Service<T, ID> {
-
-	protected static final Logger LOG = LoggerFactory.getLogger(DefaultService.class);
 
 	protected final CrudRepository<T, ID> repository;
 
@@ -31,7 +31,13 @@ public abstract class DefaultService<DTO extends Dto, T extends DefaultEntity, I
 	}
 
 	@Override
+	@Deprecated
 	public T find(final ID id) throws EntityNotFoundException {
+		return findByIdChecked(id);
+	}
+
+	@Override
+	public T findOne(final ID id) throws EntityNotFoundException {
 		return findByIdChecked(id);
 	}
 
@@ -40,7 +46,7 @@ public abstract class DefaultService<DTO extends Dto, T extends DefaultEntity, I
 		try {
             return repository.save(t);
 		} catch (DataIntegrityViolationException e) {
-			LOG.error("ConstraintsViolationException while creating an Entity: {}", t.toString(), e);
+			log.error("ConstraintsViolationException while creating an Entity: {}", t.toString(), e);
 			throw new ConstraintsViolationException(e);
 		}
 		
@@ -51,8 +57,7 @@ public abstract class DefaultService<DTO extends Dto, T extends DefaultEntity, I
 	public void delete(final ID id) throws EntityNotFoundException {
 		T t = findByIdChecked(id);
 		
-		if (t instanceof AuditableEntity) {
-			AuditableEntity at = (AuditableEntity) t;
+		if (t instanceof AuditableEntity at) {
 			at.getAudit().setDateUpdated(ZonedDateTime.now());
 			at.getAudit().setDeleted(true);
 		} else {
@@ -65,8 +70,8 @@ public abstract class DefaultService<DTO extends Dto, T extends DefaultEntity, I
 		List<T> list = new ArrayList<>();
 		repository.findAll()
 					.forEach(t -> {
-						if (t instanceof AuditableEntity) {
-							if (!((AuditableEntity) t).getAudit().getDeleted()) {
+						if (t instanceof AuditableEntity at) {
+							if (!at.getAudit().getDeleted()) {
 								list.add(t);
 							}
 						} else {
@@ -86,6 +91,11 @@ public abstract class DefaultService<DTO extends Dto, T extends DefaultEntity, I
 	protected T findByIdChecked(final ID id) throws EntityNotFoundException {
 		T t = repository.findById(id)
 						.orElseThrow(() -> new EntityNotFoundException("Could not find entity with id: " + id));
+		if (t instanceof AuditableEntity at) {
+			if (at.getAudit().getDeleted()) {
+				throw new EntityNotFoundException("Could not find entity with id: " + id);
+			}
+		}
 		Hibernate.initialize(t);
 		return t;
 	}

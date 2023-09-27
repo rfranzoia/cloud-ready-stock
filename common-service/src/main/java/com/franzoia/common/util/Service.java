@@ -8,7 +8,10 @@ import java.util.List;
 
 public interface Service<T extends DefaultEntity, ID> {
 
+    @Deprecated
     T find(ID id) throws EntityNotFoundException;
+
+    T findOne(ID id) throws EntityNotFoundException;
 
     T create(T t) throws ConstraintsViolationException;
 
