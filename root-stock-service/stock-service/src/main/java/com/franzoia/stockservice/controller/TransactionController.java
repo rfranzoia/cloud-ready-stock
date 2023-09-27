@@ -10,11 +10,10 @@ import com.franzoia.common.util.ErrorResponse;
 import com.franzoia.stockservice.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * All operations with a transaction will be routed by this controller.
@@ -53,22 +52,10 @@ public class TransactionController {
 
 	@GetMapping("/dates")
 	public List<TransactionDTO> findByDateBetween(@RequestParam(value = "startDate", required = false) final String startDate,
-												  @RequestParam(value = "endDate", required = false) final String endDate) throws InvalidRequestException {
-		LocalDate start, end;
-		if (startDate == null) {
-			start = LocalDate.of(LocalDate.now().getYear(), LocalDate.now().getMonth(), 1);
-		} else {
-			start = LocalDate.parse(startDate);
-		}
-		if (endDate == null) {
-			end = LocalDate.of(LocalDate.now().getYear(), LocalDate.now().getMonth(), LocalDate.now().lengthOfMonth());
-		} else {
-			end = LocalDate.parse(endDate);
-		}
-		if (end.isBefore(start)) {
-			throw new InvalidRequestException("End date cannot be before start date");
-		}
-		return transactionService.listByDates(start, end);
+												  @RequestParam(value = "endDate", required = false) final String endDate)
+			throws InvalidRequestException {
+		TransactionService.ValidDates validDates = transactionService.getValidDates(startDate, endDate);
+		return transactionService.listByDates(validDates.start(), validDates.end());
 	}
 
 	@GetMapping("/datesAndProduct/{productId}")
@@ -76,25 +63,12 @@ public class TransactionController {
 															@RequestParam(value = "endDate", required = false) final String endDate,
 															@PathVariable("productId") final Long productId)
 			throws ServiceNotAvailableException, EntityNotFoundException {
-		LocalDate start, end;
-		if (startDate == null) {
-			start = LocalDate.of(LocalDate.now().getYear(), LocalDate.now().getMonth(), 1);
-		} else {
-			start = LocalDate.parse(startDate);
-		}
-		if (endDate == null) {
-			end = LocalDate.of(LocalDate.now().getYear(), LocalDate.now().getMonth(), LocalDate.now().lengthOfMonth());
-		} else {
-			end = LocalDate.parse(endDate);
-		}
-		if (end.isBefore(start)) {
-			throw new InvalidRequestException("End date cannot be before start date");
-		}
-		return transactionService.listByDatesAndProduct(start, end, productId);
+		TransactionService.ValidDates validDates = transactionService.getValidDates(startDate, endDate);
+		return transactionService.listByDatesAndProduct(validDates.start(), validDates.end(), productId);
     }
 
 	@GetMapping("/type/{type}")
-	public List<TransactionDTO> findType(@PathVariable final TransactionType type) {
+	public Map<TransactionType, List<TransactionDTO>> findType(@PathVariable final TransactionType type) {
 		return transactionService.listByTpe(type);
 }
 
@@ -102,4 +76,6 @@ public class TransactionController {
 	public List<TransactionDTO> findAllTransaction() {
 		return transactionService.listAllOrderByDate();
 	}
+
+
 }

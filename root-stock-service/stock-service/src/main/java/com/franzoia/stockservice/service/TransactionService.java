@@ -11,6 +11,8 @@ import com.franzoia.common.util.DefaultService;
 import com.franzoia.stockservice.model.Transaction;
 import com.franzoia.stockservice.repository.TransactionRepository;
 import com.franzoia.stockservice.service.mapper.TransactionMapper;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,7 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -46,8 +51,10 @@ public class TransactionService extends DefaultService<TransactionDTO, Transacti
 		return createTransactionList(findAll());
 	}
 
-	public List<TransactionDTO> listByTpe(final TransactionType type) {
-		return createTransactionList(((TransactionRepository) repository).findAllByTypeOrderByDate(type));
+	public Map<TransactionType, List<TransactionDTO>> listByTpe(final TransactionType type) {
+		return createTransactionList(((TransactionRepository) repository).findAllByTypeOrderByDate(type))
+				.stream()
+				.collect(groupingBy(TransactionDTO::type));
 	}
 
 	public List<TransactionDTO> listByDates(final LocalDate startDate, final LocalDate endDate) {
@@ -86,6 +93,7 @@ public class TransactionService extends DefaultService<TransactionDTO, Transacti
 
 		return TransactionDTO.builder()
 				.id(transaction.getId())
+				.type(dto.type())
 				.date(transaction.getDate())
 				.product(product)
 				.price(transaction.getPrice())
@@ -121,6 +129,7 @@ public class TransactionService extends DefaultService<TransactionDTO, Transacti
 			TransactionDTO dto = TransactionDTO.builder()
 					.id(t.getId())
 					.date(t.getDate())
+					.type(t.getType())
 					.product(product != null? product: productsMap.get(t.getProductId()).get(0))
 					.price(t.getPrice())
 					.quantity(t.getQuantity())
@@ -130,4 +139,28 @@ public class TransactionService extends DefaultService<TransactionDTO, Transacti
 		return list.stream().sorted(Comparator.comparing(t -> t.date().format(DateTimeFormatter.ofPattern("yyyyMMdd")))).toList();
 	}
 
+	public ValidDates getValidDates(String startDate, String endDate) {
+		LocalDate start, end;
+
+		if (startDate == null) {
+			start = LocalDate.of(LocalDate.now().getYear(), LocalDate.now().getMonth(), 1);
+		} else {
+			start = LocalDate.parse(startDate);
+		}
+		if (endDate == null) {
+			end = LocalDate.of(LocalDate.now().getYear(), LocalDate.now().getMonth(), LocalDate.now().lengthOfMonth());
+		} else {
+			end = LocalDate.parse(endDate);
+		}
+		if (end.isBefore(start)) {
+			throw new InvalidRequestException("End date cannot be before start date");
+		}
+		return ValidDates.builder()
+				.start(start)
+				.end(end)
+				.build();
+	}
+
+	@Builder
+	public record ValidDates(LocalDate start, LocalDate end) {}
 }
