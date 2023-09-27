@@ -128,9 +128,14 @@ public class ProductService extends DefaultService<ProductDTO, Product, Long, Pr
 	/**
 	 * Locate all products by category
 	 */
-	public List<ProductDTO> listByCategory(final Long categoryId) throws EntityNotFoundException, ServiceNotAvailableException {
+	public Map<CategoryDTO, List<ProductDTO>> listByCategory(final Long categoryId) throws EntityNotFoundException, ServiceNotAvailableException {
+		// implicit category check
 		CategoryDTO category = getCategoryDTO(categoryId);
-		return createProductList(((ProductRepository) repository).findAllByCategoryIdOrderByName(categoryId), category);
+
+		// find all products by category and return them grouping by Category
+		return createProductList(((ProductRepository) repository).findAllByCategoryIdOrderByName(categoryId), category)
+				.stream()
+				.collect(groupingBy(ProductDTO::category));
 	}
 
 	private List<ProductDTO> createProductList(final List<Product> products, final CategoryDTO category) {

@@ -1,5 +1,6 @@
 package com.franzoia.productservice.controller;
 
+import com.franzoia.common.dto.CategoryDTO;
 import com.franzoia.common.dto.ProductDTO;
 import com.franzoia.common.exception.ConstraintsViolationException;
 import com.franzoia.common.exception.EntityNotFoundException;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * All operations with a product will be routed by this controller.
@@ -63,7 +65,7 @@ public class ProductController {
 	}
 
 	@GetMapping("/category/{categoryId}")
-	public List<ProductDTO> listByCategory(@PathVariable final Long categoryId) throws EntityNotFoundException, ServiceNotAvailableException {
+	public Map<CategoryDTO, List<ProductDTO>> listByCategory(@PathVariable final Long categoryId) throws EntityNotFoundException, ServiceNotAvailableException {
 		return productsService.listByCategory(categoryId);
 	}
 
