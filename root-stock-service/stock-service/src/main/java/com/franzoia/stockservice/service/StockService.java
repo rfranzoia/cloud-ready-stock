@@ -33,9 +33,27 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         super(stockRepository, new StockMapper());
     }
 
+    /**
+     * List all stock information available
+     * @return List of stock data
+     */
+    public List<StockDTO> listALl() throws ServiceNotAvailableException, EntityNotFoundException {
+        final Map<Long, List<ProductDTO>> productsMap = productService.getProductMap();
+        return createListOfStockDTO(((StockRepository) repository).findAllOrderByYearMonthPeriodAndProductId(), null);
+    }
+
+    /**
+     * Retrieve the Stock information for a specific Product and Yeah/Month period
+     *
+     * @param period the year/month perior
+     * @param productId the id of the product
+     * @return the stock information
+     * @throws EntityNotFoundException when the product is not found
+     * @throws ServiceNotAvailableException the the product-service is not available
+     */
     public StockDTO getByYearMonthPeriodAndProduct(final String period, final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
-        ProductDTO product = productService.getProductById(productId);
-        Stock stock = findByIdChecked(new StockKey(period, productId));
+        final ProductDTO product = productService.getProductById(productId);
+        final Stock stock = findByIdChecked(new StockKey(period, productId));
         return StockDTO.builder()
                 .key(stock.getKey())
                 .product(product)
@@ -46,24 +64,41 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
                 .build();
     }
 
+    /**
+     * List all Stock information for a specific product
+     *
+     * @param productId id of the product
+     * @return a list of stocks for the product
+     * @throws EntityNotFoundException if the product doesn't exists
+     * @throws ServiceNotAvailableException if the product service is not available to validate the product
+     */
     public List<StockDTO> listByProduct(final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
         final ProductDTO product = productService.getProductById(productId);
-
-        return findAll().stream().map(s -> {
-                    StockDTO dto = StockDTO.builder()
-                        .key(s.getKey())
-                        .product(product)
-                        .inputs(s.getInputs())
-                        .outputs(s.getOutputs())
-                        .previousBalance(s.getPreviousBalance())
-                        .currentBalance(s.getCurrentBalance())
-                        .build();
-                    return dto;
-                }).toList().stream()
-                    .sorted(Comparator.comparing(s -> s.getKey().getYearMonthPeriod())).toList();
-
+        return createListOfStockDTO(((StockRepository)repository).findAllByProductId(productId), product);
     }
 
+    public List<StockDTO> listByYearMonthPeriod(final String yeahMonthPeriod)
+            throws ServiceNotAvailableException, EntityNotFoundException {
+        return createListOfStockDTO(((StockRepository) repository).findAllByYearMonthPeriod(yeahMonthPeriod), null);
+    }
+
+    private List<StockDTO> createListOfStockDTO(final List<Stock> stocks, final ProductDTO product)
+            throws EntityNotFoundException, ServiceNotAvailableException {
+        final Map<Long, List<ProductDTO>> productsMap = product == null? productService.getProductMap(): null;
+        return stocks.stream()
+                        .map(s -> StockDTO.builder()
+                                .key(s.getKey())
+                                .product(product == null? productsMap.get(s.getKey().getProductId()).get(0): product)
+                                .inputs(s.getInputs())
+                                .outputs(s.getOutputs())
+                                .previousBalance(s.getPreviousBalance())
+                                .currentBalance(s.getCurrentBalance())
+                                .build()).toList();
+    }
+
+    /**
+     * Add a quantity to the stock of a product on a specific date, converted to Year/Month
+     */
     @Transactional
     public void addToStock(final LocalDate date, final Long productId, final Long quantity) throws EntityNotFoundException {
         // convert received date to YearMonth period string
@@ -92,7 +127,9 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         }
     }
 
-
+    /**
+     * removes a quantity from the stock of a product on a specific date, converted to Year/Month
+     */
     public void removeFromStock(final LocalDate date, final Long productId, final Long quantity) throws EntityNotFoundException, InvalidRequestException {
         // convert received date to YearMonth period string
         String yearMonth = date.format(DateTimeFormatter.ofPattern("yyyyMM"));
@@ -132,6 +169,32 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         }
     }
 
+    /**
+     * this will update all stock information for a product
+     *
+     * @param productId id of the product
+     * @throws EntityNotFoundException if the product doesn't exists
+     * @throws ServiceNotAvailableException if the product service is not available to validate the product
+     */
+    @Transactional
+    public void syncStockBalance(final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
+        List<StockDTO> list = listByProduct(productId);
+        Long previousBalance = 0L;
+        for (StockDTO dto : list) {
+            StockDTO updatedDTO = StockDTO.builder()
+                    .key(dto.getKey())
+                    .inputs(dto.getInputs())
+                    .outputs(dto.getOutputs())
+                    .previousBalance(previousBalance)
+                    .currentBalance(previousBalance + dto.getInputs() - dto.getOutputs())
+                    .build();
+            repository.save(mapper.convertDtoToEntity(updatedDTO));
+            previousBalance = updatedDTO.getCurrentBalance();
+        }
+    }
+
+
+
     private void updateForwardStock(final LocalDate date, final Long productId) {
         String currentPeriod = date.format(DateTimeFormatter.ofPattern("yyyyMM"));
         Stock currentStock = repository.findById(new StockKey(currentPeriod, productId)).orElse(null);
@@ -168,28 +231,6 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         repository.save(entity);
     }
 
-    /**
-     * this will update all stock information for a product
-     *
-     * @param productId
-     */
-    @Transactional
-    public void syncStockBalance(final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
-        List<StockDTO> list = listByProduct(productId);
-        Long previousBalance = 0L;
-        for (StockDTO dto : list) {
-            StockDTO updatedDTO = StockDTO.builder()
-                    .key(dto.getKey())
-                    .inputs(dto.getInputs())
-                    .outputs(dto.getOutputs())
-                    .previousBalance(previousBalance)
-                    .currentBalance(previousBalance + dto.getInputs() - dto.getOutputs())
-                    .build();
-            repository.save(mapper.convertDtoToEntity(updatedDTO));
-            previousBalance = updatedDTO.getCurrentBalance();
-        }
-    }
-
     private String getPreviousMonthPeriod(LocalDate date) {
         LocalDate previousMonth = date.plusMonths(-1);
         return previousMonth.format(DateTimeFormatter.ofPattern("yyyyMM"));
@@ -199,24 +240,4 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         String yearMonth = getPreviousMonthPeriod(date);
         return repository.findById(new StockKey(yearMonth, productId)).orElse(null);
     }
-
-    public List<StockDTO> listALl() {
-        Map<Long, List<ProductDTO>> productsMap = productService.getProductMap();
-        List<StockDTO> list = new ArrayList<>();
-        repository.findAll()
-                .forEach(s -> {
-                    StockDTO dto = StockDTO.builder()
-                            .key(s.getKey())
-                            .product(productsMap.get(s.getKey().getProductId()).get(0))
-                            .inputs(s.getInputs())
-                            .outputs(s.getOutputs())
-                            .previousBalance(s.getPreviousBalance())
-                            .currentBalance(s.getCurrentBalance())
-                            .build();
-                    list.add(dto);
-                });
-
-        return list.stream().sorted(Comparator.comparing(s -> s.getKey().getYearMonthPeriod())).collect(Collectors.toList());
-    }
-
 }

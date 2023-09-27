@@ -24,18 +24,26 @@ public class StockController {
     }
 
     @GetMapping
-    public List<StockDTO> findAllTransaction() {
+    public List<StockDTO> findAllTransaction() throws ServiceNotAvailableException, EntityNotFoundException {
         return stockService.listALl();
     }
 
     @GetMapping("/yearMonth/{yearMonth}/product/{productId}")
     public StockDTO getByYearMonthAndProduct(@PathVariable("yearMonth") final String yearMonth,
-                                             @PathVariable("productId") final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
+                                             @PathVariable("productId") final Long productId)
+            throws EntityNotFoundException, ServiceNotAvailableException {
         return stockService.getByYearMonthPeriodAndProduct(yearMonth, productId);
     }
 
     @GetMapping("/product/{productId}")
-    public List<StockDTO> listByProduct(@PathVariable("productId") final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
+    public List<StockDTO> listByProduct(@PathVariable("productId") final Long productId)
+            throws EntityNotFoundException, ServiceNotAvailableException {
         return stockService.listByProduct(productId);
+    }
+
+    @GetMapping("/yearMonth/{yearMonth}")
+    public List<StockDTO> listByYearMonth(@PathVariable("yearMonth") final String yearMonth)
+            throws ServiceNotAvailableException, EntityNotFoundException {
+        return stockService.listByYearMonthPeriod(yearMonth);
     }
 }
