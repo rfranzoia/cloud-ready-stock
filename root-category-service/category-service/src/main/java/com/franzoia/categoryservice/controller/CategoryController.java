@@ -4,6 +4,7 @@ import com.franzoia.categoryservice.service.CategoryService;
 import com.franzoia.common.dto.CategoryDTO;
 import com.franzoia.common.exception.ConstraintsViolationException;
 import com.franzoia.common.exception.EntityNotFoundException;
+import com.franzoia.common.exception.ServiceNotAvailableException;
 import com.franzoia.common.util.ErrorResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -47,7 +48,7 @@ public class CategoryController {
 	}
 
 	@DeleteMapping("/{categoryId}")
-	public ResponseEntity<ErrorResponse> deleteCategory(@PathVariable final long categoryId) throws EntityNotFoundException {
+	public ResponseEntity<ErrorResponse> deleteCategory(@PathVariable final long categoryId) throws EntityNotFoundException, ServiceNotAvailableException {
 		categoriesService.delete(categoryId);
 		return new ResponseEntity<>(ErrorResponse.builder().message("Category successfully deleted").build(), HttpStatus.ACCEPTED);
 	}

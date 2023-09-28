@@ -46,7 +46,7 @@ public class ProductController {
 	}
 
 	@DeleteMapping("/{productId}")
-	public ResponseEntity<ErrorResponse> deleteProduct(@PathVariable final long productId) throws EntityNotFoundException {
+	public ResponseEntity<ErrorResponse> deleteProduct(@PathVariable final long productId) throws EntityNotFoundException, ServiceNotAvailableException {
 		productsService.delete(productId);
 		return new ResponseEntity<>(ErrorResponse.builder()
 				.message("Product Successfully deleted")
