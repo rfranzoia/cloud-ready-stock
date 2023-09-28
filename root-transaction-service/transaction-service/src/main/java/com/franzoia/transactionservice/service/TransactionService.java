@@ -89,10 +89,10 @@ public class TransactionService extends DefaultService<TransactionDTO, Transacti
 				case OUTPUT -> stockService.removeFromStock(dto.date(), dto.productId(), dto.quantity());
 				default -> throw new InvalidRequestException("couldn't create the transaction and update stock");
 			}
-		} catch (Throwable t) {
-			log.error("Error while updating the stock");
+		} catch (Throwable throwable) {
+			log.error("Error during stock update: {}", throwable.getMessage());
 			repository.delete(transaction);
-			throw t;
+			throw throwable;
 		}
 
 		return TransactionDTO.builder()
