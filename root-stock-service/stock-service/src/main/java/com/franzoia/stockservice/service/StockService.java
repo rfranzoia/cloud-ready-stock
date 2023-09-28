@@ -1,8 +1,6 @@
 package com.franzoia.stockservice.service;
 
-import com.franzoia.common.dto.ProductDTO;
-import com.franzoia.common.dto.StockDTO;
-import com.franzoia.common.dto.StockKey;
+import com.franzoia.common.dto.*;
 import com.franzoia.common.exception.EntityNotFoundException;
 import com.franzoia.common.exception.InvalidRequestException;
 import com.franzoia.common.exception.ServiceNotAvailableException;
@@ -18,13 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 
 @Slf4j
 @Service
 public class StockService extends DefaultService<StockDTO, Stock, StockKey, StockMapper> {
+
+    public static final DateTimeFormatter YYYY_MM_DD = DateTimeFormatter.ofPattern("yyyyMMdd");
+    public static final DateTimeFormatter YYYY_MM = DateTimeFormatter.ofPattern("yyyyMM");
 
     @Autowired
     private ProductService productService;
@@ -39,7 +39,7 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
      */
     public List<StockDTO> listALl() throws ServiceNotAvailableException, EntityNotFoundException {
         final Map<Long, List<ProductDTO>> productsMap = productService.getProductMap();
-        return createListOfStockDTO(((StockRepository) repository).findAllOrderByYearMonthPeriodAndProductId(), null);
+        return createListOfStockDTO(((StockRepository) repository).findAllOrderByYearMonthAndProductId(), null);
     }
 
     /**
@@ -51,7 +51,7 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
      * @throws EntityNotFoundException when the product is not found
      * @throws ServiceNotAvailableException the the product-service is not available
      */
-    public StockDTO getByYearMonthPeriodAndProduct(final String period, final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
+    public StockDTO getByYearMonthAndProduct(final String period, final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
         final ProductDTO product = productService.getProductById(productId);
         final Stock stock = findByIdChecked(new StockKey(period, productId));
         return StockDTO.builder()
@@ -77,9 +77,9 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         return createListOfStockDTO(((StockRepository)repository).findAllByProductId(productId), product);
     }
 
-    public List<StockDTO> listByYearMonthPeriod(final String yeahMonthPeriod)
+    public List<StockDTO> listByYearMonth(final String yeahMonthPeriod)
             throws ServiceNotAvailableException, EntityNotFoundException {
-        return createListOfStockDTO(((StockRepository) repository).findAllByYearMonthPeriod(yeahMonthPeriod), null);
+        return createListOfStockDTO(((StockRepository) repository).findAllByYearMonth(yeahMonthPeriod), null);
     }
 
     private List<StockDTO> createListOfStockDTO(final List<Stock> stocks, final ProductDTO product)
@@ -96,19 +96,27 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
                                 .build()).toList();
     }
 
+    @Transactional
+    public void updateStock(final String yearMonth, final Long productId, final StockUpdateRequest updateRequest)
+            throws EntityNotFoundException, ServiceNotAvailableException {
+        switch (updateRequest.type()) {
+            case INPUT -> addToStock(yearMonth, productId, updateRequest.quantity());
+            case OUTPUT -> removeFromStock(yearMonth, productId, updateRequest.quantity());
+        }
+        // just make sure everything is correctly calculated
+        syncStockBalance(productId);
+    }
+
     /**
      * Add a quantity to the stock of a product on a specific date, converted to Year/Month
      */
     @Transactional
-    public void addToStock(final LocalDate date, final Long productId, final Long quantity) throws EntityNotFoundException {
-        // convert received date to YearMonth period string
-        String yearMonth = date.format(DateTimeFormatter.ofPattern("yyyyMM"));
-
+    public void addToStock(final String yearMonth, final Long productId, final Long quantity) throws EntityNotFoundException {
         // retrieve the Stock for the Product
         Stock stock = repository.findById(new StockKey(yearMonth, productId)).orElse(null);
 
         if (stock == null) {
-            Stock previousStock = getPreviousMonthStock(date, productId);
+            Stock previousStock = getPreviousMonthStock(yearMonth, productId);
             Long previous = previousStock == null? 0L: previousStock.getCurrentBalance();
             saveStockUpdate(yearMonth, productId,
                     quantity,
@@ -122,23 +130,21 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
                     stock.getPreviousBalance(),
                     Math.min(stock.getCurrentBalance() + quantity, 0));
         }
-        if (!date.getMonth().equals(LocalDate.now().getMonth())) {
-            updateForwardStock(date, productId);
+        final String today = LocalDate.now().format(YYYY_MM);
+        if (Integer.parseInt(yearMonth) < Integer.parseInt(today)) {
+            updateForwardStock(yearMonth, productId);
         }
     }
 
     /**
      * removes a quantity from the stock of a product on a specific date, converted to Year/Month
      */
-    public void removeFromStock(final LocalDate date, final Long productId, final Long quantity) throws EntityNotFoundException, InvalidRequestException {
-        // convert received date to YearMonth period string
-        String yearMonth = date.format(DateTimeFormatter.ofPattern("yyyyMM"));
-
+    public void removeFromStock(final String yearMonth, final Long productId, final Long quantity) throws EntityNotFoundException, InvalidRequestException {
         // retrieve the Stock for the Product
         Stock stock = repository.findById(new StockKey(yearMonth, productId)).orElse(null);
 
         if (stock == null) {
-            Stock previousStock = getPreviousMonthStock(date, productId);
+            Stock previousStock = getPreviousMonthStock(yearMonth, productId);
             if (previousStock == null ) {
                 throw new EntityNotFoundException("No Stock information found, remove not possible");
 
@@ -164,8 +170,9 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
                     Math.min(stock.getCurrentBalance() - quantity, 0));
 
         }
-        if (!date.getMonth().equals(LocalDate.now().getMonth())) {
-            updateForwardStock(date, productId);
+        final String today = LocalDate.now().format(YYYY_MM);
+        if (Integer.parseInt(yearMonth) < Integer.parseInt(today)) {
+            updateForwardStock(yearMonth, productId);
         }
     }
 
@@ -181,6 +188,11 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         List<StockDTO> list = listByProduct(productId);
         Long previousBalance = 0L;
         for (StockDTO dto : list) {
+            // ignore previous years stock since the listByProduct brings everything
+            int stockYear = LocalDate.parse(dto.getKey().getYearMonth() + "01", YYYY_MM_DD).getYear();
+            if (stockYear < LocalDate.now().getYear()) continue;
+
+            // update the stock quantities
             StockDTO updatedDTO = StockDTO.builder()
                     .key(dto.getKey())
                     .inputs(dto.getInputs())
@@ -195,17 +207,16 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
 
 
 
-    private void updateForwardStock(final LocalDate date, final Long productId) {
-        String currentPeriod = date.format(DateTimeFormatter.ofPattern("yyyyMM"));
+    private void updateForwardStock(final String currentPeriod, final Long productId) {
         Stock currentStock = repository.findById(new StockKey(currentPeriod, productId)).orElse(null);
 
         assert currentStock != null;
         Long balance = currentStock.getCurrentBalance();
-        LocalDate nextMonth = date;
+        LocalDate nextMonth = LocalDate.parse(currentPeriod + "01", YYYY_MM_DD);
 
         do {
             nextMonth = nextMonth.plusMonths(1);
-            String nextPeriod = nextMonth.format(DateTimeFormatter.ofPattern("yyyyMM"));
+            String nextPeriod = nextMonth.format(YYYY_MM);
             Stock nextMoonthStock = repository.findById(new StockKey(nextPeriod, productId)).orElse(null);
             if (nextMoonthStock != null) {
                 saveStockUpdate(nextPeriod, productId, nextMoonthStock.getInputs(), nextMoonthStock.getOutputs(),
@@ -231,13 +242,9 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         repository.save(entity);
     }
 
-    private String getPreviousMonthPeriod(LocalDate date) {
-        LocalDate previousMonth = date.plusMonths(-1);
-        return previousMonth.format(DateTimeFormatter.ofPattern("yyyyMM"));
-    }
-
-    private Stock getPreviousMonthStock(LocalDate date, Long productId) {
-        String yearMonth = getPreviousMonthPeriod(date);
-        return repository.findById(new StockKey(yearMonth, productId)).orElse(null);
+    private Stock getPreviousMonthStock(final String yearMonth, final Long productId) {
+        LocalDate currentDate = LocalDate.parse(yearMonth + "01", YYYY_MM_DD);
+        String previousYearMonth = currentDate.plusMonths(-1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        return repository.findById(new StockKey(previousYearMonth, productId)).orElse(null);
     }
 }

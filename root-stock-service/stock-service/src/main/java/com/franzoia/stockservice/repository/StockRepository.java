@@ -14,18 +14,18 @@ public interface StockRepository extends CrudRepository<Stock, StockKey> {
 
     @Query(value = "SELECT s " +
                     "FROM Stock s " +
-                    "ORDER BY s.key.yearMonthPeriod ASC, s.key.productId ASC")
-    List<Stock> findAllOrderByYearMonthPeriodAndProductId();
+                    "ORDER BY s.key.yearMonth ASC, s.key.productId ASC")
+    List<Stock> findAllOrderByYearMonthAndProductId();
 
     @Query(value = "SELECT s " +
                    "FROM Stock s " +
                    "WHERE s.key.productId = :product " +
-                   "ORDER BY s.key.yearMonthPeriod")
+                   "ORDER BY s.key.yearMonth")
     List<Stock> findAllByProductId(@Param("product") final Long productId);
 
     @Query(value = "SELECT s " +
                    "FROM Stock s " +
-                   "WHERE s.key.yearMonthPeriod = :period " +
+                   "WHERE s.key.yearMonth = :period " +
                    "ORDER BY s.key.productId")
-    List<Stock> findAllByYearMonthPeriod(@Param("period") final String productId);
+    List<Stock> findAllByYearMonth(@Param("period") final String productId);
 }

@@ -14,7 +14,7 @@ public class StockMapper implements AbstractMapper<Stock, StockDTO> {
 
     @Override
     public Stock convertDtoToEntity(StockDTO dto) {
-        StockKey key = new StockKey(dto.getKey().getYearMonthPeriod(), dto.getKey().getProductId());
+        StockKey key = new StockKey(dto.getKey().getYearMonth(), dto.getKey().getProductId());
         return new Stock(key, dto.getPreviousBalance(), dto.getInputs(), dto.getOutputs(), dto.getCurrentBalance());
     }
 
