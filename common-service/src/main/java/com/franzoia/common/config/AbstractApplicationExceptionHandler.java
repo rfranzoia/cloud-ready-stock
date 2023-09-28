@@ -16,7 +16,7 @@ import java.util.Optional;
 public class AbstractApplicationExceptionHandler extends ResponseEntityExceptionHandler {
 
     protected ResponseEntity<ErrorResponse> getResponse(Integer statusCode, Exception exception, WebRequest request) {
-        log.info("message from stock-service: {}", getExceptionMessage(exception).toString());
+        log.info("message from service: {}", getExceptionMessage(exception).toString());
         return new ResponseEntity<>(ErrorResponse.builder()
                 .timestamp(new Date())
                 .code(statusCode)
