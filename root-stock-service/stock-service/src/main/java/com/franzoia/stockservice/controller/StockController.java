@@ -41,8 +41,7 @@ public class StockController {
     }
 
     @GetMapping("/yearMonth/{yearMonth}")
-    public List<StockDTO> listByYearMonth(@PathVariable("yearMonth") final String yearMonth)
-            throws ServiceNotAvailableException, EntityNotFoundException {
+    public List<StockDTO> listByYearMonth(@PathVariable("yearMonth") final String yearMonth) {
         return stockService.listByYearMonth(yearMonth);
     }
 

@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -44,6 +45,21 @@ public class TransactionService extends DefaultService<TransactionDTO, Transacti
 
 	public TransactionService(final TransactionRepository transactionRepository) {
 		super(transactionRepository, new TransactionMapper());
+	}
+
+	public TransactionDTO getTransaction(final Long transactionId) throws EntityNotFoundException, ServiceNotAvailableException {
+		Transaction transaction = findOne(transactionId);
+		// implicit product validation
+		ProductDTO product = productService.getProductById(transaction.getProductId());
+
+		return TransactionDTO.builder()
+				.id(transaction.getId())
+				.type(transaction.getType())
+				.date(transaction.getDate())
+				.product(product)
+				.price(transaction.getPrice())
+				.quantity(transaction.getQuantity())
+				.build();
 	}
 
 	public List<TransactionDTO> listAllOrderByDate() {
@@ -133,12 +149,24 @@ public class TransactionService extends DefaultService<TransactionDTO, Transacti
 	private List<TransactionDTO> createTransactionList(final List<Transaction> transactions, final ProductDTO product) {
 		Map<Long, List<ProductDTO>> productsMap = product == null? productService.getProductMap() : null;
 		List<TransactionDTO> list = new ArrayList<>();
+
+		// fallback for category-service
+		final Function<Long, ProductDTO> prod = id -> {
+			if (productsMap == null || productsMap.isEmpty() || !productsMap.containsKey(id)) {
+				return ProductDTO.builder()
+						.name("Unavailable Product Data")
+						.build();
+			} else {
+				return productsMap.get(id).get(0);
+			}
+		};
+
 		transactions.forEach(t -> {
 			TransactionDTO dto = TransactionDTO.builder()
 					.id(t.getId())
 					.date(t.getDate())
 					.type(t.getType())
-					.product(product != null? product: productsMap.get(t.getProductId()).get(0))
+					.product(product != null? product: prod.apply(t.getProductId()))
 					.price(t.getPrice())
 					.quantity(t.getQuantity())
 					.build();

@@ -31,8 +31,8 @@ public class TransactionController {
 	}
 
 	@GetMapping("/{transactionId}")
-	public TransactionDTO getTransaction(@PathVariable final long transactionId) throws EntityNotFoundException {
-		return transactionService.getMapper().convertEntityToDTO(transactionService.find(transactionId));
+	public TransactionDTO getTransaction(@PathVariable final long transactionId) throws EntityNotFoundException, ServiceNotAvailableException {
+		return transactionService.getTransaction(transactionId);
 	}
 
 	@PostMapping

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Function;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -38,7 +39,6 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
      * @return List of stock data
      */
     public List<StockDTO> listALl() throws ServiceNotAvailableException, EntityNotFoundException {
-        final Map<Long, List<ProductDTO>> productsMap = productService.getProductMap();
         return createListOfStockDTO(((StockRepository) repository).findAllOrderByYearMonthAndProductId(), null);
     }
 
@@ -77,18 +77,28 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         return createListOfStockDTO(((StockRepository)repository).findAllByProductId(productId), product);
     }
 
-    public List<StockDTO> listByYearMonth(final String yeahMonthPeriod)
-            throws ServiceNotAvailableException, EntityNotFoundException {
+    public List<StockDTO> listByYearMonth(final String yeahMonthPeriod) {
         return createListOfStockDTO(((StockRepository) repository).findAllByYearMonth(yeahMonthPeriod), null);
     }
 
-    private List<StockDTO> createListOfStockDTO(final List<Stock> stocks, final ProductDTO product)
-            throws EntityNotFoundException, ServiceNotAvailableException {
+    private List<StockDTO> createListOfStockDTO(final List<Stock> stocks, final ProductDTO product) {
         final Map<Long, List<ProductDTO>> productsMap = product == null? productService.getProductMap(): null;
+
+        // fallback for category-service
+        final Function<Long, ProductDTO> prod = id -> {
+            if (productsMap == null || productsMap.isEmpty() || !productsMap.containsKey(id)) {
+                return ProductDTO.builder()
+                        .name("Unavailable Product Data")
+                        .build();
+            } else {
+                return productsMap.get(id).get(0);
+            }
+        };
+
         return stocks.stream()
                         .map(s -> StockDTO.builder()
                                 .key(s.getKey())
-                                .product(product == null? productsMap.get(s.getKey().getProductId()).get(0): product)
+                                .product(product == null? prod.apply(s.getKey().getProductId()): product)
                                 .inputs(s.getInputs())
                                 .outputs(s.getOutputs())
                                 .previousBalance(s.getPreviousBalance())

@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.function.Function;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -49,17 +50,14 @@ public class ProductService extends DefaultService<ProductDTO, Product, Long, Pr
 				.build();
 	}
 
-	private CategoryDTO getCategoryDTO(final Long categoryId) throws EntityNotFoundException, ServiceNotAvailableException {
+	private CategoryDTO getCategoryDTO(final Long categoryId) throws EntityNotFoundException, FeignException, ServiceNotAvailableException {
 		try {
 			return categoryFeignClient.getByCategoryId(categoryId);
-		} catch (Throwable throwable) {
-			log.error("Category not found", throwable);
-            if (throwable instanceof FeignException) {
-				throw new ServiceNotAvailableException("Category service is down");
-			}
-			throw new EntityNotFoundException("Category not found");
-		}
-	}
+		} catch (ServiceNotAvailableException | FeignException fe) {
+			log.error("Category not available", fe);
+			throw fe;
+        }
+    }
 
 	/**
 	 * Creates a product
@@ -140,6 +138,18 @@ public class ProductService extends DefaultService<ProductDTO, Product, Long, Pr
 
 	private List<ProductDTO> createProductList(final List<Product> products, final CategoryDTO category) {
 		Map<Long, List<CategoryDTO>> categoryMap = category == null? getCategoryMap(): null;
+
+		// fallback for category-service
+		final Function<Long, CategoryDTO> cat = id -> {
+			if (categoryMap == null || categoryMap.isEmpty() || !categoryMap.containsKey(id)) {
+				return CategoryDTO.builder()
+						.name("Unavailable Category Data")
+						.build();
+			} else {
+				return categoryMap.get(id).get(0);
+			}
+		};
+
 		List<ProductDTO> list = new ArrayList<>();
 		products.stream()
 			.filter(p -> !p.getAudit().getDeleted())
@@ -147,7 +157,7 @@ public class ProductService extends DefaultService<ProductDTO, Product, Long, Pr
 				ProductDTO dto = ProductDTO.builder()
 						.id(p.getId())
 						.name(p.getName())
-						.category(category != null? category: categoryMap.get(p.getCategoryId()).get(0))
+						.category(category != null? category: cat.apply(p.getCategoryId()))
 						.price(p.getPrice())
 						.unit(p.getUnit())
 						.build();
@@ -160,8 +170,8 @@ public class ProductService extends DefaultService<ProductDTO, Product, Long, Pr
 		try {
 			List<CategoryDTO> categories = categoryFeignClient.listCategories();
 			return categories.stream().collect(groupingBy(CategoryDTO::id));
-		} catch (Throwable throwable) {
-			log.error("Category server is down?", throwable);
+		} catch (Throwable fe) {
+			log.error("category-service status: {}", fe.getMessage());
 			return new TreeMap<>();
 		}
 

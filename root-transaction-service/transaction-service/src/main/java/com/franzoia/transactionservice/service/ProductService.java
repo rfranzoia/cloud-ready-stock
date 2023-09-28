@@ -25,12 +25,9 @@ public class ProductService {
     public ProductDTO getProductById(final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
         try {
             return productFeignClient.getProductById(productId);
-        } catch (Throwable throwable) {
-            log.error("Product not found, error {}", throwable.getMessage());
-            if (throwable instanceof FeignException) {
-                throw new ServiceNotAvailableException(String.format("Couldn't validate Product, is service down (?): %s", throwable.getMessage()));
-            }
-            throw new EntityNotFoundException("Product not found");
+        } catch (FeignException fe) {
+            log.error("product-service status: {}", fe.getMessage());
+            throw fe;
         }
     }
 
@@ -38,10 +35,11 @@ public class ProductService {
         try {
             List<ProductDTO> products = productFeignClient.getAllProducts();
             return products.stream().collect(groupingBy(ProductDTO::id));
-        } catch (Throwable throwable) {
-            log.error("Couldn't retrieve Product list, is product-service down (?) {}", throwable.getMessage());
+        } catch (Throwable fe) {
+            log.error("product-service status: {}", fe.getMessage());
             return new TreeMap<>();
         }
+
     }
 
 }
