@@ -1,46 +1,52 @@
 package com.franzoia.transactionservice.service;
 
-import com.franzoia.common.dto.ProductDTO;
+import com.franzoia.common.dto.StockUpdateRequest;
+import com.franzoia.common.dto.TransactionType;
 import com.franzoia.common.exception.EntityNotFoundException;
 import com.franzoia.common.exception.ServiceNotAvailableException;
-import com.franzoia.transactionservice.config.ProductFeignClient;
+import com.franzoia.transactionservice.config.StockFeignClient;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
-import static java.util.stream.Collectors.groupingBy;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Component
-public class ProductService {
+public class StockService {
+
+    public static final DateTimeFormatter YYYY_MM = DateTimeFormatter.ofPattern("yyyyMM");
 
     @Autowired
-    private ProductFeignClient productFeignClient;
+    private StockFeignClient stockFeignClient;
 
-    public ProductDTO getProductById(final Long productId) throws EntityNotFoundException, ServiceNotAvailableException {
+    public void addToStock(LocalDate date, Long productId, Long quantity) throws ServiceNotAvailableException, EntityNotFoundException {
         try {
-            return productFeignClient.getProductById(productId);
-        } catch (Throwable throwable) {
-            log.error("Product not found, error {}", throwable.getMessage());
-            if (throwable instanceof FeignException) {
-                throw new ServiceNotAvailableException(String.format("Couldn't validate Product, is service down (?): %s", throwable.getMessage()));
-            }
-            throw new EntityNotFoundException("Product not found");
+            final String yearMonth = date.format(YYYY_MM);
+            stockFeignClient.updateStock(yearMonth, productId,
+                    StockUpdateRequest.builder()
+                            .type(TransactionType.INPUT)
+                            .quantity(quantity)
+                            .build());
+        } catch (FeignException fe) {
+            log.error("Something went wrong with the stock-service", fe);
+            throw fe;
         }
     }
 
-    public Map<Long, List<ProductDTO>> getProductMap() {
+    public void removeFromStock(LocalDate date, Long productId, Long quantity) throws ServiceNotAvailableException, EntityNotFoundException {
         try {
-            List<ProductDTO> products = productFeignClient.getAllProducts();
-            return products.stream().collect(groupingBy(ProductDTO::id));
-        } catch (Throwable throwable) {
-            log.error("Couldn't retrieve Product list, is product-service down (?) {}", throwable.getMessage());
-            return new TreeMap<>();
+            final String yearMonth = date.format(YYYY_MM);
+            stockFeignClient.updateStock(yearMonth, productId,
+                    StockUpdateRequest.builder()
+                            .type(TransactionType.OUTPUT)
+                            .quantity(quantity)
+                            .build());
+        } catch (FeignException fe) {
+            log.error("Something went wrong with the stock-service", fe);
+            throw fe;
         }
     }
 

@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: transaction-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/stock
+    username: stock
+    password: St0ckP4ss
+    driver-class-name: org.postgresql.Driver
+  h2:
+    console:
+      enabled: 'true'
+  jpa:
+    show-sql: 'true'
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      platform: postgres
+
+server:
+  port: 8084
+  servlet:
+    context-path: /transaction-service
+
+springdoc:
+  api-docs:
+    path: /api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health, info, metrics"

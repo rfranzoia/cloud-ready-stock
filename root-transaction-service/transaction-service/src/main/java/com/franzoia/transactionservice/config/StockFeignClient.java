@@ -1,21 +1,21 @@
 package com.franzoia.transactionservice.config;
 
-import com.franzoia.common.dto.ProductDTO;
+import com.franzoia.common.dto.StockUpdateRequest;
 import com.franzoia.common.exception.EntityNotFoundException;
+import com.franzoia.common.exception.InvalidRequestException;
+import com.franzoia.common.exception.ServiceNotAvailableException;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
-import java.util.List;
-
-@FeignClient(value = "PRODUCT-SERVICE", path = "/product-service/api/v1/products",
+@FeignClient(value = "STOCK-SERVICE", path = "/stock-service/api/v1/stocks",
         configuration = { CustomErrorDecoder.class })
-public interface ProductFeignClient {
+public interface StockFeignClient {
 
-    @GetMapping
-    public List<ProductDTO> getAllProducts();
-
-    @GetMapping("/{productId}")
-    public ProductDTO getProductById(@PathVariable("productId") final Long productId) throws EntityNotFoundException;
+    @PutMapping("/yearMonth/{yearMonth}/product/{productId}")
+    void updateStock(@PathVariable("yearMonth") final String yearMonth,
+                     @PathVariable("productId") final Long productId, @RequestBody final StockUpdateRequest updateRequest)
+            throws EntityNotFoundException, InvalidRequestException, ServiceNotAvailableException;
 
 }
