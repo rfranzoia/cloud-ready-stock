@@ -1,62 +1,46 @@
 package com.franzoia.categoryservice.controller;
 
+import com.franzoia.common.config.AbstractApplicationExceptionHandler;
 import com.franzoia.common.exception.ConstraintsViolationException;
 import com.franzoia.common.exception.EntityNotFoundException;
 import com.franzoia.common.exception.InvalidRequestException;
 import com.franzoia.common.exception.ServiceNotAvailableException;
 import com.franzoia.common.util.ErrorResponse;
+import feign.FeignException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.util.Date;
-
+@Slf4j
 @RestControllerAdvice
-public class ApplicationExceptionHandler extends ResponseEntityExceptionHandler {
+public class ApplicationExceptionHandler extends AbstractApplicationExceptionHandler {
 
     @ExceptionHandler({ServiceNotAvailableException.class})
     public ResponseEntity<ErrorResponse> handleProductServiceNotAvailableException(ServiceNotAvailableException exception, WebRequest request) {
-        return new ResponseEntity<>(ErrorResponse.builder()
-                .code(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
-                .message(exception.getMessage())
-                .details(request.getDescription(false))
-                .build(), HttpStatus.INTERNAL_SERVER_ERROR);
+        return getResponse(HttpStatus.SERVICE_UNAVAILABLE.value(), exception, request);
     }
 
     @ExceptionHandler({EntityNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleProductNotFoundException(EntityNotFoundException exception, WebRequest request) {
-        return new ResponseEntity<>(ErrorResponse.builder()
-                .timestamp(new Date())
-                .code(HttpStatus.NOT_FOUND.value())
-                .status(HttpStatus.NOT_FOUND.toString())
-                .message(exception.getMessage())
-                .details(request.getDescription(false))
-                .build(), HttpStatus.NOT_FOUND);
+        return getResponse(HttpStatus.NOT_FOUND.value(), exception, request);
     }
 
     @ExceptionHandler({InvalidRequestException.class})
     public ResponseEntity<ErrorResponse> handleProductNotFoundException(InvalidRequestException exception, WebRequest request) {
-        return new ResponseEntity<>(ErrorResponse.builder()
-                .timestamp(new Date())
-                .code(HttpStatus.BAD_REQUEST.value())
-                .status(HttpStatus.BAD_REQUEST.toString())
-                .message(exception.getMessage())
-                .details(request.getDescription(false))
-                .build(), HttpStatus.BAD_REQUEST);
+        return getResponse(HttpStatus.BAD_REQUEST.value(), exception, request);
     }
 
     @ExceptionHandler({ConstraintsViolationException.class})
     public ResponseEntity<ErrorResponse> handleConstraintsViolationException(ConstraintsViolationException exception, WebRequest request) {
-        return new ResponseEntity<>(ErrorResponse.builder()
-                .timestamp(new Date())
-                .code(HttpStatus.UNPROCESSABLE_ENTITY.value())
-                .status(HttpStatus.UNPROCESSABLE_ENTITY.toString())
-                .message(exception.getMessage())
-                .details(request.getDescription(false))
-                .build(), HttpStatus.UNPROCESSABLE_ENTITY);
+        return getResponse(HttpStatus.UNPROCESSABLE_ENTITY.value(), exception, request);
     }
+
+    @ExceptionHandler({FeignException.class})
+    public ResponseEntity<ErrorResponse> handleFeignException(FeignException exception, WebRequest request) {
+        return getResponse(exception.status(), exception, request);
+    }
+
 }

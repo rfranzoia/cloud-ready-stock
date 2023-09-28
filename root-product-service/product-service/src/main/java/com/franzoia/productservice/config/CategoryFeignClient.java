@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-@FeignClient(name = "CATEGORY-SERVICE", path = "/category-service/api/v1/categories")
+@FeignClient(name = "CATEGORY-SERVICE", path = "/category-service/api/v1/categories",
+        configuration = { CategoryErrorDecoder.class })
 public interface CategoryFeignClient {
 
     @GetMapping

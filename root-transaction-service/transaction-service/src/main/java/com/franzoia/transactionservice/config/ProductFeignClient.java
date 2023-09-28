@@ -1,5 +1,6 @@
 package com.franzoia.transactionservice.config;
 
+import com.franzoia.common.config.DefaultErrorDecoder;
 import com.franzoia.common.dto.ProductDTO;
 import com.franzoia.common.exception.EntityNotFoundException;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.List;
 
 @FeignClient(value = "PRODUCT-SERVICE", path = "/product-service/api/v1/products",
-        configuration = { CustomErrorDecoder.class })
+        configuration = { ProductErrorDecoder.class })
 public interface ProductFeignClient {
 
     @GetMapping

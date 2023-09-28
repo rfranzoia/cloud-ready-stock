@@ -8,7 +8,8 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(value = "STOCK-SERVICE", path = "/stock-service/api/v1/stocks")
+@FeignClient(value = "STOCK-SERVICE", path = "/stock-service/api/v1/stocks",
+        configuration = { StockErrorDecoder.class })
 public interface StockFeignClient {
 
     @PostMapping
