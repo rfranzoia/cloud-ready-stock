@@ -13,7 +13,7 @@ import java.io.Serializable;
 @Embeddable
 public class StockKey implements Serializable {
 
-    private String yearMonthPeriod;
+    private String yearMonth;
     private Long productId;
 
 }

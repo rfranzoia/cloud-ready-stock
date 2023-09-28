@@ -3,6 +3,7 @@ package com.franzoia.common.util;
 
 import com.franzoia.common.exception.ConstraintsViolationException;
 import com.franzoia.common.exception.EntityNotFoundException;
+import com.franzoia.common.exception.ServiceNotAvailableException;
 import com.franzoia.common.util.audit.AuditableEntity;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
