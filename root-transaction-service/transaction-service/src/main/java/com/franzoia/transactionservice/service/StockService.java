@@ -1,5 +1,6 @@
 package com.franzoia.transactionservice.service;
 
+import com.franzoia.common.dto.StockKey;
 import com.franzoia.common.dto.StockUpdateRequest;
 import com.franzoia.common.dto.TransactionType;
 import com.franzoia.common.exception.EntityNotFoundException;
@@ -25,11 +26,11 @@ public class StockService {
     public void addToStock(LocalDate date, Long productId, Long quantity) throws ServiceNotAvailableException, EntityNotFoundException {
         try {
             final String yearMonth = date.format(YYYY_MM);
-            stockFeignClient.updateStock(yearMonth, productId,
-                    StockUpdateRequest.builder()
-                            .type(TransactionType.INPUT)
-                            .quantity(quantity)
-                            .build());
+            stockFeignClient.addOrRemoveStock(StockUpdateRequest.builder()
+                                    .key(new StockKey(yearMonth, productId))
+                                    .type(TransactionType.INPUT)
+                                    .quantity(quantity)
+                                    .build());
         } catch (FeignException fe) {
             log.error("Something went wrong with the stock-service", fe);
             throw fe;
@@ -39,11 +40,11 @@ public class StockService {
     public void removeFromStock(LocalDate date, Long productId, Long quantity) throws ServiceNotAvailableException, EntityNotFoundException {
         try {
             final String yearMonth = date.format(YYYY_MM);
-            stockFeignClient.updateStock(yearMonth, productId,
-                    StockUpdateRequest.builder()
-                            .type(TransactionType.OUTPUT)
-                            .quantity(quantity)
-                            .build());
+            stockFeignClient.addOrRemoveStock(StockUpdateRequest.builder()
+                                .key(new StockKey(yearMonth, productId))
+                                .type(TransactionType.OUTPUT)
+                                .quantity(quantity)
+                                .build());
         } catch (FeignException fe) {
             log.error("Something went wrong with the stock-service", fe);
             throw fe;
