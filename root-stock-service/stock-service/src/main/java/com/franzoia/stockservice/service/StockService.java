@@ -229,7 +229,7 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
         } while (!nextMonth.getMonth().equals(LocalDate.now().getMonth()));
     }
 
-    private void saveStockUpdate(String yearMonth, Long productId, Long in, Long out, Long previous, Long current) {
+    private void saveStockUpdate(final String yearMonth, final Long productId, final Long in, final Long out, final Long previous, final Long current) {
         StockDTO dto = StockDTO.builder()
                 .key(new StockKey(yearMonth, productId))
                 .inputs(in)
@@ -244,7 +244,7 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
 
     private Stock getPreviousMonthStock(final String yearMonth, final Long productId) {
         LocalDate currentDate = LocalDate.parse(yearMonth + "01", YYYY_MM_DD);
-        String previousYearMonth = currentDate.plusMonths(-1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String previousYearMonth = currentDate.plusMonths(-1).format(YYYY_MM);
         return repository.findById(new StockKey(previousYearMonth, productId)).orElse(null);
     }
 }
