@@ -97,14 +97,14 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
     }
 
     @Transactional
-    public void updateStock(final String yearMonth, final Long productId, final StockUpdateRequest updateRequest)
+    public void addOrUpdateStock(final StockUpdateRequest updateRequest)
             throws EntityNotFoundException, ServiceNotAvailableException {
         switch (updateRequest.type()) {
-            case INPUT -> addToStock(yearMonth, productId, updateRequest.quantity());
-            case OUTPUT -> removeFromStock(yearMonth, productId, updateRequest.quantity());
+            case INPUT -> addToStock(updateRequest.key().getYearMonth(), updateRequest.key().getProductId(), updateRequest.quantity());
+            case OUTPUT -> removeFromStock(updateRequest.key().getYearMonth(), updateRequest.key().getProductId(), updateRequest.quantity());
         }
         // just make sure everything is correctly calculated
-        syncStockBalance(productId);
+        syncStockBalance(updateRequest.key().getProductId());
     }
 
     /**
@@ -141,15 +141,18 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
      */
     public void removeFromStock(final String yearMonth, final Long productId, final Long quantity) throws EntityNotFoundException, InvalidRequestException {
         // retrieve the Stock for the Product
-        Stock stock = repository.findById(new StockKey(yearMonth, productId)).orElse(null);
+        StockKey key = new StockKey(yearMonth, productId);
+        Stock stock = repository.findById(key).orElse(null);
 
         if (stock == null) {
             Stock previousStock = getPreviousMonthStock(yearMonth, productId);
             if (previousStock == null ) {
+                log.info("No Stock information found for {}, remove not possible", key);
                 throw new EntityNotFoundException("No Stock information found, remove not possible");
 
             } else if (previousStock.getCurrentBalance() < quantity) {
-                throw new InvalidRequestException("Removal quantity cannot exceed the current balance");
+                log.info("Removal quantity cannot exceed the current balance");
+                throw new InvalidRequestException("quantity cannot exceed the current balance");
 
             } else {
                 saveStockUpdate(yearMonth, productId,
@@ -160,6 +163,7 @@ public class StockService extends DefaultService<StockDTO, Stock, StockKey, Stoc
 
             }
         } else if (stock.getCurrentBalance() < quantity) {
+            log.info("Removal quantity cannot exceed the current balance");
             throw new InvalidRequestException("Removal quantity cannot exceed the current balance");
 
         } else {

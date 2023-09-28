@@ -46,10 +46,9 @@ public class StockController {
         return stockService.listByYearMonth(yearMonth);
     }
 
-    @PutMapping("/yearMonth/{yearMonth}/product/{productId}")
-    void updateStock(@PathVariable("yearMonth") final String yearMonth,
-                     @PathVariable("productId") final Long productId, @RequestBody final StockUpdateRequest updateRequest)
+    @PostMapping
+    void addOrUpdateStock(@RequestBody final StockUpdateRequest updateRequest)
             throws EntityNotFoundException, InvalidRequestException, ServiceNotAvailableException {
-        stockService.updateStock(yearMonth, productId, updateRequest);
+        stockService.addOrUpdateStock(updateRequest);
     }
 }

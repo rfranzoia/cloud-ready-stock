@@ -8,8 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-@FeignClient(value = "PRODUCT-SERVICE", path = "/product-service/api/v1/products",
-        configuration = { CustomErrorDecoder.class })
+@FeignClient(value = "PRODUCT-SERVICE", path = "/product-service/api/v1/products")
 public interface ProductFeignClient {
 
     @GetMapping
