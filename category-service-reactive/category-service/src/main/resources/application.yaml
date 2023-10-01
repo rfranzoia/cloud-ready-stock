@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: category-service
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/stock
     username: stock
@@ -17,3 +19,14 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /api-ui
+
+server:
+  port: 8083
+  servlet:
+    context-path: /category-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"

@@ -66,9 +66,9 @@ public class CategoryController {
 
 	@DeleteMapping("/{categoryId}")
 	@Operation(summary = "Removes a Category by ID")
-	public ResponseEntity<ErrorResponse> deleteCategory(@PathVariable final long categoryId) {
-		categoriesService.delete(categoryId);
-		return new ResponseEntity<>(ErrorResponse.builder().message("Category successfully deleted").build(), HttpStatus.ACCEPTED);
+	public Mono<ResponseEntity<ErrorResponse>> deleteCategory(@PathVariable final long categoryId) {
+		return categoriesService.delete(categoryId)
+				.then(Mono.fromCallable(() -> new ResponseEntity<>(ErrorResponse.builder().message("Category successfully deleted").build(), HttpStatus.ACCEPTED)));
 	}
 
 	@PutMapping("/{categoryId}")
