@@ -16,7 +16,6 @@ import java.time.ZonedDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @Data
 @Table(value = "categories")
 public class Category implements ReactiveAuditableEntity {

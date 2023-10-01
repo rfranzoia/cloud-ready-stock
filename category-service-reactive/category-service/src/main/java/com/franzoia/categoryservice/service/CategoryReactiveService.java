@@ -28,10 +28,11 @@ public class CategoryReactiveService extends DefaultReactiveService<CategoryDTO,
         return repository.findById(categoryId)
                     .switchIfEmpty(entityNotFound)
                     .then(findCategoryByName(categoryId, dto))
-                    .flatMap(category -> {
-                                category.setName(dto.name());
-                                return save(category);
-                    })
+                    .switchIfEmpty(repository.findById(categoryId)
+                        .flatMap(category -> {
+                            category.setName(dto.name());
+                            return save(category);
+                        }))
                     .map(mapper::convertEntityToDTO);
 
     }
