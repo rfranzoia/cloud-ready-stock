@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+
+  postgres-service:
+    container_name: postgres-service
+    image: postgres:15
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: stock
+      POSTGRES_USER: stock
+      POSTGRES_PASSWORD: St0ckP4ss
