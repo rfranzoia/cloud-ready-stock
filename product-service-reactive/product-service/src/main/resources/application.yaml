@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: product-service
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/stock
+    username: stock
+    password: St0ckP4ss
+  jpa:
+    defer-datasource-initialization: 'true'
+    show-sql: 'true'
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /api-ui
+
+server:
+  port: 8082
+  servlet:
+    context-path: /product-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
