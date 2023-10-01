@@ -1,4 +1,4 @@
-package com.franzoia.categoryservice.common.reactive;
+package com.franzoia.common.util.reactive;
 
 
 import com.franzoia.common.util.DefaultEntity;

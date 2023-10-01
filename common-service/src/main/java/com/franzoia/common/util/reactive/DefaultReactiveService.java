@@ -1,4 +1,4 @@
-package com.franzoia.categoryservice.common.reactive;
+package com.franzoia.common.util.reactive;
 
 import com.franzoia.common.exception.ConstraintsViolationException;
 import com.franzoia.common.exception.EntityNotFoundException;
@@ -44,25 +44,12 @@ public abstract class DefaultReactiveService<DTO extends Dto, T extends DefaultE
 	public Mono<Void> delete(final ID id) {
 		return repository.findById(id)
 					.switchIfEmpty(entityNotFound)
-					.flatMap(t -> {
-						if (t instanceof ReactiveAuditableEntity) {
-							((ReactiveAuditableEntity) t).setDeleted(true);
-							return save(t).flatMap(saved -> Mono.empty());
-						} else {
-							return repository.delete(t);
-						}
-					});
+					.flatMap(repository::delete);
     }
 
 	@Override
 	public Flux<T> findAll() {
-		return repository.findAll()
-				.filter(t -> {
-					if (t instanceof ReactiveAuditableEntity) {
-						return !((ReactiveAuditableEntity) t).getDeleted();
-					}
-					return true;
-				});
+		return repository.findAll();
 	}
 
 	protected Flux<T> findAny() {
@@ -70,14 +57,7 @@ public abstract class DefaultReactiveService<DTO extends Dto, T extends DefaultE
 	}
 	
 	protected Mono<T> findByIdChecked(final ID id) {
-		return repository.findById(id)
-					.filter(t -> {
-						if (t instanceof ReactiveAuditableEntity) {
-							return !((ReactiveAuditableEntity) t).getDeleted();
-						}
-						return true;
-					})
-					.switchIfEmpty(entityNotFound);
+		return repository.findById(id).switchIfEmpty(entityNotFound);
 	}
 
 }

@@ -1,4 +1,4 @@
-package com.franzoia.categoryservice.common.reactive;
+package com.franzoia.common.util.reactive;
 
 import com.franzoia.common.util.DefaultEntity;
 
@@ -11,8 +11,5 @@ public interface ReactiveAuditableEntity extends DefaultEntity {
 
     ZonedDateTime getDateUpdated();
     void setDateUpdated(ZonedDateTime dateUpdated);
-
-    Boolean getDeleted();
-    void setDeleted(Boolean isDeleted);
 
 }
